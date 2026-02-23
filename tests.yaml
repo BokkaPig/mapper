@@ -1,0 +1,407 @@
+# tests.yaml
+# Maps function types to pentest attack categories.
+# Edit freely — add/remove entries, add custom function types.
+# These are injected into the report output at generation time.
+# Sources: OWASP Top 10, OWASP API Security Top 10, OWASP Testing Guide,
+#          OWASP WSTG, HackTricks, PortSwigger Web Security Academy.
+
+# ============================================================
+# FILE UPLOAD
+# ============================================================
+file_upload:
+  # --- Web Shell / Code Execution ---
+  - Unrestricted File Upload (web shell: .php .asp .aspx .jsp .phtml .php5 .shtml)
+  - File Extension Bypass — Double Extension (.php.jpg .asp.png)
+  - File Extension Bypass — Null Byte (%00 truncation before extension check)
+  - File Extension Bypass — Case Variation (.PhP .aSp .JsP)
+  - File Extension Bypass — Trailing Characters (.php. .php␣)
+  - File Extension Bypass — Alternate Extensions (.php3 .php4 .php7 .pht .phar)
+  - MIME Type Bypass — Modify Content-Type to image/jpeg or image/png
+  - Magic Bytes Bypass — Prepend valid image magic bytes (GIF89a;) before payload
+  - Polyglot File — Valid image + embedded malicious payload
+  # --- Injection via File Content ---
+  - XML External Entity (XXE) via SVG upload
+  - XML External Entity (XXE) via DOCX / XLSX / PPTX content
+  - XML External Entity (XXE) via uploaded XML
+  - Server-Side Request Forgery (SSRF) via SVG external resource
+  - Server-Side Request Forgery (SSRF) via file content (URL in field)
+  - CSV / Formula Injection (=CMD|' /C calc'!A0) in uploaded spreadsheet
+  - PHP Phar Deserialization via uploaded .phar archive
+  - Java Deserialization via uploaded serialized object
+  - ImageMagick / ImageTragick RCE via malicious image
+  - PDF Injection — JavaScript execution in PDF viewer
+  - HTAccess / Web.config Upload (overwrite server config)
+  # --- Path / Directory Attacks ---
+  - Path Traversal via Filename (../../etc/passwd)
+  - Path Traversal in Archive Entries (Zip Slip)
+  - Zip Bomb / Decompression Bomb (DoS via archive)
+  - Symlink in Archive (points to sensitive file on extraction)
+  - File Overwrite — Upload to path of existing critical file
+  # --- XSS via Upload ---
+  - Cross-Site Scripting (XSS) via SVG with embedded script
+  - Cross-Site Scripting (XSS) via HTML file upload served inline
+  - Stored XSS via filename reflected in UI
+  - Cross-Site Scripting (XSS) via EXIF metadata (GPS, Author field)
+  - Cross-Site Scripting (XSS) via Content-Type sniffing (Content-Type: text/html)
+  # --- Access / Logic ---
+  - Unauthenticated Upload (no session required)
+  - Overwrite Another User's File (IDOR on upload destination)
+  - Predictable Upload Path (guessable file URL after upload)
+  - Race Condition — Access file between upload and validation
+  - Missing Anti-Virus / Malware Scanning
+  - Metadata Not Stripped (EXIF data with GPS / author info in images)
+  - Denial of Service — Oversized file upload
+  - Denial of Service — Concurrent upload flood
+  - Content-Disposition Missing (file served inline, allowing execution in browser)
+  - Filename SQL Injection (filename inserted into DB query unsanitised)
+
+# ============================================================
+# LOGIN FORM
+# ============================================================
+login_form:
+  # --- Injection ---
+  - SQL Injection (username and password fields)
+  - NoSQL Injection (JSON-based auth endpoints)
+  - LDAP Injection (LDAP-backed authentication)
+  - XPath Injection (XML-based auth stores)
+  # --- Authentication Bypass ---
+  - Authentication Bypass via Parameter Manipulation (admin=true, role=admin)
+  - Default Credentials (admin/admin, admin/password, root/root, guest/guest)
+  - Blank Password Accepted
+  - Username as Password
+  - Password in URL / GET Parameter
+  - Insecure "Remember Me" — Predictable / persistent token
+  - Insecure "Remember Me" — Token not invalidated on logout
+  # --- Account Enumeration ---
+  - Username Enumeration via Differential Response (error message)
+  - Username Enumeration via Timing Attack
+  - Username Enumeration via HTTP Response Code
+  - Email Enumeration via Password Reset Form
+  # --- Brute Force & Rate Limiting ---
+  - Brute Force — No Account Lockout
+  - Brute Force — No Rate Limiting on Login Endpoint
+  - Brute Force — CAPTCHA Bypass or Absence
+  - Credential Stuffing susceptibility (no lockout, no detection)
+  - Account Lockout Bypass (IP rotation, X-Forwarded-For manipulation)
+  # --- Session Management ---
+  - Session Fixation (session ID not rotated on login)
+  - Session Token Entropy (short / predictable token)
+  - Concurrent Session Not Invalidated (login from multiple devices)
+  - Session Cookie Missing Secure Flag
+  - Session Cookie Missing HttpOnly Flag
+  - Session Cookie Missing SameSite Attribute
+  - Session Not Invalidated on Logout
+  # --- CSRF ---
+  - Cross-Site Request Forgery (CSRF) — No Token
+  - Cross-Site Request Forgery (CSRF) — Token Not Validated Server-Side
+  - Cross-Site Request Forgery (CSRF) — Token Reuse Allowed
+  # --- Transport Security ---
+  - Insecure Transmission — Credentials Sent Over HTTP
+  - Credentials Cached in Browser History / Autocomplete Enabled
+  # --- MFA / 2FA ---
+  - 2FA Bypass — Reuse of Valid OTP Code
+  - 2FA Bypass — Response Manipulation (change false to true)
+  - 2FA Bypass — Rate Limiting Absent on OTP Entry
+  - 2FA Bypass — Backup Code Brute Force
+  - 2FA Bypass — MFA Fatigue (push notification spam)
+  - 2FA Bypass — Direct Access to Post-Auth Page without Completing MFA
+  # --- OAuth / SSO ---
+  - OAuth Misconfiguration — open redirect_uri
+  - OAuth Misconfiguration — State Parameter Missing / Not Validated (CSRF)
+  - OAuth Misconfiguration — Authorization Code Interception
+  - OAuth Misconfiguration — Token Leakage in Referrer Header
+  - SAML Vulnerability — XML Signature Wrapping (XSW)
+  - SAML Vulnerability — Signature Not Verified
+  - SSO — Subdomain Takeover for Auth Cookie Exfiltration
+  # --- Post-Login ---
+  - Open Redirect After Login (next= / redirect= parameter)
+  - HTTP Header Injection / CRLF Injection (username field)
+  - Password Reset Poisoning (Host header manipulation)
+  - Insecure Password Reset Token (guessable, non-expiring)
+  - Security Question Bypass (easily guessable answers)
+  - JWT Vulnerabilities (if token issued on login — see api_endpoint)
+
+# ============================================================
+# SEARCH
+# ============================================================
+search:
+  # --- Injection ---
+  - Cross-Site Scripting (XSS) — Reflected
+  - Cross-Site Scripting (XSS) — Stored (if search terms persisted)
+  - DOM-Based XSS (if search term written into DOM via JS)
+  - SQL Injection
+  - NoSQL Injection (MongoDB $where, $regex, operator injection)
+  - LDAP Injection
+  - XPath Injection
+  - Server-Side Template Injection (SSTI)
+  - Command Injection
+  - XML External Entity (XXE) if search submits XML
+  - Server-Side Request Forgery (SSRF) if search accepts URLs
+  # --- Path / File ---
+  - Path Traversal (file-backed search index)
+  - Local File Inclusion (LFI) via search path parameter
+  # --- Information Disclosure ---
+  - Information Disclosure — Internal paths, usernames, emails returned
+  - Information Disclosure — Sensitive fields exposed in search results
+  - Full-Text Search Data Mining (extract all records via pagination)
+  - Elasticsearch / Solr / Typesense Query Injection
+  - Wildcard Abuse (*, %, _ return all records)
+  # --- Logic / Access ---
+  - Insecure Direct Object Reference (IDOR) — Access other users' private data
+  - Broken Object Level Authorization via search filter
+  - Mass Data Extraction — Missing pagination / rate limit
+  - Parameter Pollution (HPP) on search parameters
+  - Open Redirect via search redirect parameter
+  - Business Logic — Search results expose items user should not see
+  # --- DoS ---
+  - Regular Expression Denial of Service (ReDoS) — Malicious regex input
+  - Search Flood / Denial of Service — No rate limiting
+  - Expensive Query DoS — Deep wildcard / unbounded full-text query
+
+# ============================================================
+# GENERIC FORM
+# ============================================================
+form_generic:
+  # --- Injection ---
+  - Cross-Site Scripting (XSS) — Reflected
+  - Cross-Site Scripting (XSS) — Stored
+  - DOM-Based XSS
+  - SQL Injection
+  - NoSQL Injection
+  - LDAP Injection
+  - XPath Injection
+  - Server-Side Template Injection (SSTI)
+  - Command Injection (OS Command Injection)
+  - XML External Entity (XXE) (if form submits XML / Content-Type: text/xml)
+  - Server-Side Request Forgery (SSRF) (URL-accepting fields)
+  - HTML Injection
+  - CSS Injection
+  - Email Header Injection (name / subject fields in contact forms)
+  - HTTP Response Splitting / CRLF Injection
+  - JSON Injection
+  - Format String Injection
+  - Null Byte Injection
+  # --- CSRF ---
+  - Cross-Site Request Forgery (CSRF) — No Token
+  - Cross-Site Request Forgery (CSRF) — Token Not Tied to Session
+  - Cross-Site Request Forgery (CSRF) — Token Reuse Across Requests
+  - Cross-Site Request Forgery (CSRF) — Token Predictable / Weak Entropy
+  - Clickjacking — Form submission framed by attacker page
+  # --- Access Control ---
+  - Mass Assignment — Inject extra fields (isAdmin, role, price)
+  - Privilege Escalation via Hidden / Disabled Form Fields
+  - Insecure Direct Object Reference (IDOR) — Modify object ID in field
+  - Horizontal Privilege Escalation (modify another user's data)
+  - Vertical Privilege Escalation (elevate to admin via field)
+  - Broken Access Control — Submit form without required role
+  # --- Logic ---
+  - Business Logic — Price / Quantity / Discount Manipulation
+  - Business Logic — Negative Values Accepted
+  - Business Logic — Integer Overflow / Underflow
+  - Business Logic — Race Condition / Double Submit
+  - Business Logic — TOCTOU (Time-of-Check / Time-of-Use)
+  - Business Logic — Workflow Step Bypass (skip required step)
+  - Business Logic — Coupon / Voucher Code Abuse
+  - Parameter Pollution (HTTP Parameter Pollution)
+  - Open Redirect (redirect= / next= / return= parameters)
+  - Client-Side Validation Bypass (intercept and modify before submission)
+  - Unicode Normalization Bypass (homoglyph / confusable characters)
+  - Insecure Deserialization (serialised object in hidden field / cookie)
+
+# ============================================================
+# DOWNLOAD LINK
+# ============================================================
+download_link:
+  # --- Path / File Access ---
+  - Path Traversal (../../etc/passwd via filename / path parameter)
+  - Local File Inclusion (LFI) via file path parameter
+  - Remote File Inclusion (RFI) via user-controlled URL
+  - Symlink Following (server follows symlink to sensitive file)
+  - Zip Slip (malicious archive downloaded then extracted)
+  # --- Access Control ---
+  - Unauthenticated Access to Protected File
+  - Insecure Direct Object Reference (IDOR) — Increment file / object ID
+  - Broken Access Control — Low-privilege user accesses admin files
+  - Predictable File URL / Guessable Resource Location
+  - Expired / Reusable Signed URL (pre-signed S3 / GCS / Azure URLs)
+  - Hot-linking / Token Sharing (signed URL forwarded to others)
+  - Race Condition — Access file between generation and access control check
+  # --- Information Disclosure ---
+  - Sensitive Data Exposure (confidential documents, PII)
+  - Metadata Exposure in Downloaded Files (author, revision, GPS)
+  - Error Message Information Disclosure (reveals internal file path)
+  - Directory Listing Enabled
+  - Backup File Exposure (.bak .old .orig .swp ~file)
+  # --- Content Injection / Execution ---
+  - Cross-Site Scripting (XSS) — File served as text/html in browser
+  - Content-Type Sniffing Attack (browser executes file despite wrong Content-Type)
+  - Missing Content-Disposition: attachment (file rendered inline)
+  - CSV / Formula Injection in Downloaded Report / Export
+  - Server-Side Request Forgery (SSRF) via redirect to user-controlled URL
+  - Open Redirect (download endpoint redirects to attacker URL)
+  - PDF Exfiltration via embedded PDF form / JavaScript
+  - XML External Entity (XXE) in downloaded / processed XML file
+
+# ============================================================
+# API ENDPOINT
+# ============================================================
+api_endpoint:
+  # --- OWASP API Security Top 10 (2023) ---
+  - Broken Object Level Authorization (BOLA / IDOR) — Access other users' objects
+  - Broken Authentication — No / Weak token validation
+  - Broken Object Property Level Authorization (Mass Assignment / Excess Data Exposure)
+  - Unrestricted Resource Consumption — No rate limiting, large payloads
+  - Broken Function Level Authorization (BFLA) — Access admin endpoints
+  - Unrestricted Access to Sensitive Business Flows
+  - Server-Side Request Forgery (SSRF)
+  - Security Misconfiguration (permissive CORS, verbose errors, unnecessary methods)
+  - Improper Inventory Management — Shadow / deprecated / undocumented endpoints
+  - Unsafe Consumption of Third-Party APIs
+  # --- Injection ---
+  - SQL Injection (path parameters, query string, request body)
+  - NoSQL Injection
+  - LDAP Injection
+  - XPath Injection
+  - Command Injection (OS Command Injection)
+  - Server-Side Template Injection (SSTI)
+  - XML External Entity (XXE) (Content-Type: application/xml)
+  - Cross-Site Scripting (XSS) — Stored via API response rendered in UI
+  - JSON Injection
+  - CRLF Injection / HTTP Response Splitting
+  - Header Injection (X-Forwarded-For, X-Original-IP, Host)
+  - Path Traversal
+  # --- Authentication / Authorisation ---
+  - Missing Authentication — Remove Authorization header → should 401
+  - Token Not Invalidated on Logout
+  - Horizontal Privilege Escalation — Low-privilege user accesses another user's data
+  - Vertical Privilege Escalation — Low-privilege user accesses admin function
+  - JWT — Algorithm Confusion (RS256 → HS256 with public key as secret)
+  - JWT — Algorithm None Attack (alg: none)
+  - JWT — Weak Secret Brute Force
+  - JWT — kid / jku / x5u Header Injection
+  - JWT — Expiry Not Validated (exp claim ignored)
+  - JWT — Audience / Issuer Not Validated
+  - API Key Exposed in Response / Error Message
+  - Hardcoded API Key / Secret in JS or Response
+  # --- CORS / Headers ---
+  - "Insecure CORS Policy (Access-Control-Allow-Origin: * or reflected origin)"
+  - CORS Trusted Null Origin
+  - Missing Security Headers (HSTS, X-Frame-Options, CSP, X-Content-Type-Options)
+  - HTTP Method Override (X-HTTP-Method-Override: DELETE)
+  # --- Logic / Business ---
+  - Business Logic Flaw (price manipulation, quantity bypass, workflow skip)
+  - Race Condition / TOCTOU
+  - Integer Overflow / Underflow in numeric parameters
+  - IDOR in Batch / Bulk Operations
+  - Parameter Pollution (HPP)
+  - Open Redirect via return / redirect parameter
+  - Mass Data Extraction (no pagination limit, missing rate limit on list endpoints)
+  # --- GraphQL ---
+  - GraphQL Introspection Enabled in Production
+  - GraphQL Batching Attack (alias flooding, query batching)
+  - GraphQL Deep Nesting / Circular Query DoS
+  - GraphQL IDOR via direct object queries
+  - GraphQL Mutation Injection
+  # --- Versioning / Inventory ---
+  - API Version Exposure (v1 accessible when v2 current, legacy endpoint lacks controls)
+  - Undocumented / Debug Endpoint Exposure (/debug /test /swagger /openapi.json)
+  - Swagger / OpenAPI Spec Exposed (/swagger.json /api-docs /openapi.yaml)
+  # --- Deserialization / Parsing ---
+  - Insecure Deserialization (Java, PHP, Python pickle, .NET)
+  - XML Billion Laughs / Quadratic Blowup (DoS via XML parser)
+  - JSON Prototype Pollution
+  # --- DoS ---
+  - Denial of Service via Large Payload
+  - Denial of Service via Deep JSON Nesting
+  - Regular Expression Denial of Service (ReDoS)
+  - Denial of Service via Expensive Query / Operation
+  # --- Caching ---
+  - Cache Poisoning via Host Header / X-Forwarded-Host
+  - Web Cache Deception
+  - Cache Key Injection
+
+# ============================================================
+# STANDALONE INPUT FIELD
+# ============================================================
+input_field:
+  # --- XSS ---
+  - Cross-Site Scripting (XSS) — Reflected
+  - Cross-Site Scripting (XSS) — Stored (if value persisted)
+  - DOM-Based XSS (value written into DOM via innerHTML / document.write)
+  - Cross-Site Scripting (XSS) — Event Handler Injection (onmouseover onerror)
+  - Cross-Site Scripting (XSS) — JavaScript URI (javascript:alert(1))
+  - Mutation XSS (mXSS) — Parser discrepancy between sanitizer and browser
+  # --- Injection ---
+  - SQL Injection
+  - NoSQL Injection
+  - LDAP Injection
+  - XPath Injection
+  - Command Injection (OS Command Injection)
+  - Server-Side Template Injection (SSTI)
+  - HTML Injection
+  - CSS Injection (style attribute injection)
+  - Email Header Injection (fields used in email construction)
+  - Format String Injection
+  - Null Byte Injection
+  - CRLF Injection
+  - JSON Injection
+  - SSRF (if field value used as a URL)
+  - Path Traversal (if field value used in file path construction)
+  - Open Redirect (if field value used in redirect)
+  # --- Client-Side Logic ---
+  - Prototype Pollution (if field feeds into JavaScript object merge)
+  - Client-Side Validation Bypass (disable JS / intercept request)
+  - Autocomplete Enabled on Sensitive Fields (passwords, card numbers)
+  - Autofill Leakage — Hidden fields harvesting autofill data
+  - Clickjacking via input focus abuse
+  # --- Encoding / Parsing ---
+  - Unicode Normalization Bypass (homoglyphs, confusables)
+  - Overlong UTF-8 Encoding Bypass
+  - Integer Overflow / Underflow in numeric fields
+  - Negative Value Accepted in quantity / price fields
+  - Regular Expression Denial of Service (ReDoS)
+
+# ============================================================
+# WEBSOCKET
+# ============================================================
+websocket:
+  # --- Hijacking / CSRF ---
+  - Cross-Site WebSocket Hijacking (CSWSH) — No Origin validation
+  - Cross-Site WebSocket Hijacking (CSWSH) — Weak Origin whitelist (null accepted)
+  - Cross-Site WebSocket Hijacking (CSWSH) — Reflected Origin (any origin trusted)
+  # --- Authentication / Authorisation ---
+  - Authentication Bypass — Connect without valid session / token
+  - Authentication Bypass — Token Not Validated on Upgrade Handshake
+  - Authorization Bypass — Subscribe to another user's private channel
+  - Authorization Bypass — Invoke admin-only actions
+  - Token / Session Ticket Exposed in WebSocket URL (?token=xxx)
+  - Message Replay Attack (replay captured messages)
+  - Session Fixation via WebSocket ticket
+  # --- Injection via Message Payload ---
+  - SQL Injection (message body parameters)
+  - NoSQL Injection
+  - Command Injection (OS Command Injection)
+  - Cross-Site Scripting (XSS) — Message content reflected in UI
+  - Stored XSS via WebSocket message
+  - Server-Side Template Injection (SSTI)
+  - JSON Injection / Prototype Pollution
+  - XML External Entity (XXE) (binary / XML-over-WS frames)
+  - Server-Side Request Forgery (SSRF) via URL in message
+  # --- Transport Security ---
+  - Unencrypted Connection (ws:// instead of wss://) — Man-in-the-Middle
+  - Certificate Validation Not Enforced
+  # --- DoS / Resource Exhaustion ---
+  - Denial of Service — Large Message Flood
+  - Denial of Service — Connection Exhaustion (open many connections)
+  - Denial of Service — Deeply Nested JSON payload
+  - Regular Expression Denial of Service (ReDoS) via message content
+  - Slow Message Attack (send messages very slowly to hold connection open)
+  # --- Information Disclosure ---
+  - Information Disclosure — Subscribe to broadcast channel, receive other users' data
+  - Information Disclosure — Error messages leak internal paths / stack traces
+  - Sub-Protocol Abuse (Sec-WebSocket-Protocol header — known vulnerable frameworks)
+  # --- Logic ---
+  - Mass Assignment — Inject extra fields in JSON message
+  - Business Logic Bypass via WebSocket (bypass rate limiting / validation applied only on REST)
+  - Insecure Deserialization (binary WebSocket frames)
+  - GraphQL over WebSocket — Introspection / batching / deep nesting
