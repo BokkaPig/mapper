@@ -258,11 +258,24 @@ class Reporter:
     # ------------------------------------------------------------------
 
     def _write_page_functions_json(self) -> None:
-        pages = []
+        seed_hostnames = {urlparse(u).hostname for u in self.result.seed_urls}
+        total_pages = len(self.result.pages)
+
+        # First pass: deduplicate per page, filter localhost and third-party
+        clean_pages = []
         for page in self.result.pages:
             seen: set = set()
             deduped_functions = []
             for fn in page.functions:
+                if fn.action:
+                    action_host = urlparse(fn.action).hostname
+                    if action_host:
+                        # Drop localhost/loopback
+                        if action_host == "localhost" or action_host.startswith("127."):
+                            continue
+                        # Drop third-party (domain not in seed hosts)
+                        if action_host not in seed_hostnames:
+                            continue
                 key = (fn.function_type, fn.method, fn.action)
                 if key not in seen:
                     seen.add(key)
@@ -272,20 +285,55 @@ class Reporter:
                         "action": fn.action,
                         "details": fn.details,
                     })
+            clean_pages.append((page, deduped_functions))
+
+        # Second pass: count pages each unique function appears on
+        fn_page_count: dict = defaultdict(int)
+        for _page, fns in clean_pages:
+            for fn in fns:
+                fn_page_count[(fn["type"], fn["method"], fn["action"])] += 1
+
+        # Functions on 50%+ of pages are global
+        threshold = max(1, total_pages * 0.5)
+        global_keys = {k for k, count in fn_page_count.items() if count >= threshold}
+
+        # Build global_functions list (deduplicated, sorted by seen_on_pages desc)
+        global_functions = sorted(
+            [
+                {
+                    "type": k[0],
+                    "method": k[1],
+                    "action": k[2],
+                    "seen_on_pages": fn_page_count[k],
+                }
+                for k in global_keys
+            ],
+            key=lambda x: x["seen_on_pages"],
+            reverse=True,
+        )
+
+        # Build per-page output, stripping global functions
+        pages = []
+        for page, fns in clean_pages:
+            page_fns = [
+                fn for fn in fns
+                if (fn["type"], fn["method"], fn["action"]) not in global_keys
+            ]
             pages.append({
                 "url": page.url,
                 "status_code": page.status_code,
                 "content_type": page.content_type,
-                "functions": deduped_functions,
+                "functions": page_fns,
             })
 
-        total_functions = sum(len(p["functions"]) for p in pages)
+        total_functions = sum(len(p["functions"]) for p in pages) + len(global_functions)
         output = {
             "meta": {
                 "seed_urls": self.result.seed_urls,
                 "total_pages": len(pages),
                 "total_functions": total_functions,
             },
+            "global_functions": global_functions,
             "pages": pages,
         }
         path = self.output_dir / "page-functions.json"
