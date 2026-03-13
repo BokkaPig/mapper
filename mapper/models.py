@@ -65,3 +65,4 @@ class CrawlConfig:
     include_images: bool = False
     include_css: bool = False
     quiet: bool = False         # Suppress all console output (--json mode)
+    crawl_external: bool = False

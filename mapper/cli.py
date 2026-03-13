@@ -25,12 +25,14 @@ def _parse_header(value: str) -> tuple:
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
 @click.argument("urls", nargs=-1, required=True, metavar="URL [URL ...]")
 @click.option(
+    "-c",
     "--cookie",
     default=None,
     metavar="STRING",
     help="Cookie header value, e.g. 'session=abc123; token=xyz'",
 )
 @click.option(
+    "-H",
     "--header",
     "raw_headers",
     multiple=True,
@@ -54,6 +56,7 @@ def _parse_header(value: str) -> tuple:
     help="Output folder name. Omit to suppress file output.",
 )
 @click.option(
+    "-t",
     "--threads",
     default=10,
     show_default=True,
@@ -62,6 +65,7 @@ def _parse_header(value: str) -> tuple:
     help="Max concurrent workers.",
 )
 @click.option(
+    "-eb",
     "--exclude-bytes",
     "exclude_bytes",
     multiple=True,
@@ -72,6 +76,7 @@ def _parse_header(value: str) -> tuple:
     ),
 )
 @click.option(
+    "-ew",
     "--exclude-words",
     "exclude_words",
     multiple=True,
@@ -79,6 +84,7 @@ def _parse_header(value: str) -> tuple:
     help="Exclude pages matching word count expression. Repeatable.",
 )
 @click.option(
+    "-el",
     "--exclude-lines",
     "exclude_lines",
     multiple=True,
@@ -121,6 +127,13 @@ def _parse_header(value: str) -> tuple:
     default=False,
     help="Suppress all output and print the report as JSON to stdout when done.",
 )
+@click.option(
+    "--external",
+    "crawl_external",
+    is_flag=True,
+    default=False,
+    help="Crawl external (out-of-scope) URLs. Off by default; always recorded in external.txt.",
+)
 def main(
     urls,
     cookie,
@@ -136,6 +149,7 @@ def main(
     include_images,
     include_css,
     json_output,
+    crawl_external,
 ):
     """
     \b
@@ -190,6 +204,7 @@ def main(
         include_images=include_images,
         include_css=include_css,
         quiet=json_output,
+        crawl_external=crawl_external,
     )
 
     if not json_output:

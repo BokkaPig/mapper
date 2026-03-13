@@ -52,6 +52,7 @@ class Reporter:
             self._write_report_md()
         else:
             self._write_report_json()
+        self._write_page_functions_json()
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -252,6 +253,45 @@ class Reporter:
         with open(path, "w", encoding="utf-8") as f:
             json.dump(self._build_report_dict(), f, indent=2)
 
+    # ------------------------------------------------------------------
+    # page-functions.json — slim output for AI checklist generation
+    # ------------------------------------------------------------------
+
+    def _write_page_functions_json(self) -> None:
+        pages = []
+        for page in self.result.pages:
+            seen: set = set()
+            deduped_functions = []
+            for fn in page.functions:
+                key = (fn.function_type, fn.method, fn.action)
+                if key not in seen:
+                    seen.add(key)
+                    deduped_functions.append({
+                        "type": fn.function_type,
+                        "method": fn.method,
+                        "action": fn.action,
+                        "details": fn.details,
+                    })
+            pages.append({
+                "url": page.url,
+                "status_code": page.status_code,
+                "content_type": page.content_type,
+                "functions": deduped_functions,
+            })
+
+        total_functions = sum(len(p["functions"]) for p in pages)
+        output = {
+            "meta": {
+                "seed_urls": self.result.seed_urls,
+                "total_pages": len(pages),
+                "total_functions": total_functions,
+            },
+            "pages": pages,
+        }
+        path = self.output_dir / "page-functions.json"
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(output, f, indent=2)
+
     def _page_to_dict(self, page: Page) -> dict:
         return {
             "url": page.url,
@@ -365,7 +405,8 @@ class Reporter:
             if has_robots:
                 print(f"    ├── robots.txt        (robots.txt summary)")
             print(f"    ├── external.txt")
-            print(f"    └── {fmt}")
+            print(f"    ├── {fmt}")
+            print(f"    └── page-functions.json")
         print(f"{'='*60}\n")
 
         # Print the tree inline

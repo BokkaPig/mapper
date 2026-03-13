@@ -10,8 +10,10 @@ A web application mapper for penetration testers. Crawls a target using a headle
 - Extracts API endpoints from JavaScript files
 - Maps discovered functions to pentest checklists (OWASP Top 10, WSTG, HackTricks, PortSwigger)
 - Multiple output formats: JSON, Markdown, plain text files
+- Slim `page-functions.json` output for AI-assisted checklist generation
 - Configurable rate limiting, concurrency, crawl depth, and page filters
 - Cookie and custom header support for authenticated crawls
+- External URL tracking — recorded in `external.txt` but not crawled by default (`--external` to enable)
 
 ## Requirements
 
@@ -37,21 +39,22 @@ python mapper.py <URL> [OPTIONS]
 
 ### Options
 
-| Flag | Description | Default |
-|------|-------------|---------|
-| `--cookie` | Cookie header value for authenticated crawls | |
-| `--header` | Custom HTTP header (repeatable) | |
-| `--rate-limit` | Max requests per minute | 60 |
-| `-o, --output` | Output folder name | |
-| `--threads` | Max concurrent workers | 10 |
-| `--max-depth` | Maximum crawl depth | |
-| `--format` | Output format: `json` or `markdown` | json |
-| `--exclude-bytes` | Filter pages by byte count (e.g. `=0`, `<100`) | |
-| `--exclude-words` | Filter pages by word count | |
-| `--exclude-lines` | Filter pages by line count | |
-| `--img` | Include image files | |
-| `--css` | Include CSS files | |
-| `--json` | Print JSON to stdout only | |
+| Flag | Short | Description | Default |
+|------|-------|-------------|---------|
+| `--cookie` | `-c` | Cookie header value for authenticated crawls | |
+| `--header` | `-H` | Custom HTTP header (repeatable) | |
+| `--rate-limit` | | Max requests per minute | 60 |
+| `--output` | `-o` | Output folder name | |
+| `--threads` | `-t` | Max concurrent workers | 10 |
+| `--max-depth` | | Maximum crawl depth | |
+| `--format` | | Output format: `json` or `markdown` | json |
+| `--exclude-bytes` | `-eb` | Filter pages by byte count (e.g. `=0`, `<100`) | |
+| `--exclude-words` | `-ew` | Filter pages by word count | |
+| `--exclude-lines` | `-el` | Filter pages by line count | |
+| `--img` | | Include image files | |
+| `--css` | | Include CSS files | |
+| `--json` | | Print JSON to stdout only | |
+| `--external` | | Crawl external (out-of-scope) URLs | |
 
 ### Examples
 
@@ -59,17 +62,20 @@ python mapper.py <URL> [OPTIONS]
 # Basic crawl with output folder
 python mapper.py https://example.com -o results
 
-# Authenticated crawl with session cookie
-python mapper.py https://example.com --cookie "session=abc123" -o results
+# Authenticated crawl with session cookie (short flags)
+python mapper.py https://example.com -c "session=abc123" -o results
 
 # Limit depth and threads, markdown output
-python mapper.py https://example.com --max-depth 3 --threads 5 --format markdown -o results
+python mapper.py https://example.com --max-depth 3 -t 5 --format markdown -o results
 
 # Filter out empty/tiny pages
-python mapper.py https://example.com -o results --exclude-bytes "=0" --exclude-bytes "<100"
+python mapper.py https://example.com -o results -eb "=0" -eb "<100"
 
 # Add custom headers
-python mapper.py https://example.com --header "Authorization: Bearer TOKEN" -o results
+python mapper.py https://example.com -H "Authorization: Bearer TOKEN" -o results
+
+# Include external URLs in the crawl
+python mapper.py https://example.com --external -o results
 ```
 
 ## Output Files
@@ -79,14 +85,15 @@ All files are written to the specified output folder (`-o`):
 | File | Contents |
 |------|----------|
 | `report.json` | Full structured report with pages, functions, and pentest tests |
-| `report.md` | Markdown version of the report |
+| `report.md` | Markdown version of the report (with `--format markdown`) |
+| `page-functions.json` | Slim report — pages with their discovered functions only (no pentest tests); ideal for AI-assisted checklist generation |
 | `tree.txt` | ASCII tree view of discovered pages and functions |
 | `urls.txt` | All discovered URLs (no query parameters) |
 | `urls_params.txt` | All discovered URLs with query parameters |
 | `params.txt` | Unique parameter names across all pages |
 | `js.txt` | JavaScript file URLs |
 | `robots.txt` | Summary of robots.txt rules |
-| `external.txt` | External URLs found during the crawl |
+| `external.txt` | External (out-of-scope) URLs found during the crawl; always written regardless of `--external` |
 
 ## Detected Function Types
 

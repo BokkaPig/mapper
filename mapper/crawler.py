@@ -206,6 +206,8 @@ class Crawler:
                         if norm not in page.external_urls:
                             page.external_urls.append(norm)
                         self._result.external_urls.add(norm)
+                        if self.config.crawl_external and norm not in self._visited:
+                            await self._queue.put((norm, depth + 1))
 
                 # Extract and fetch JS
                 inline_scripts = self._page_parser.extract_inline_scripts(html)
