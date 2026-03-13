@@ -257,6 +257,26 @@ class Reporter:
     # page-functions.json — slim output for AI checklist generation
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _is_first_party(hostname: str, seed_hostnames: set) -> bool:
+        """Return True if hostname matches or is a subdomain of any seed host."""
+        for h in seed_hostnames:
+            if hostname == h or hostname.endswith("." + h):
+                return True
+        return False
+
+    @staticmethod
+    def _fn_dedup_key(fn: dict) -> tuple:
+        """
+        Dedup key for a function dict.
+        For input_field (action=None), include the field name+type so that
+        e.g. g-recaptcha-response and email fields are counted separately.
+        """
+        if fn["action"] is None:
+            details = fn.get("details") or {}
+            return (fn["type"], fn["method"], None, details.get("name"), details.get("type"))
+        return (fn["type"], fn["method"], fn["action"])
+
     def _write_page_functions_json(self) -> None:
         seed_hostnames = {urlparse(u).hostname for u in self.result.seed_urls}
         total_pages = len(self.result.pages)
@@ -273,52 +293,65 @@ class Reporter:
                         # Drop localhost/loopback
                         if action_host == "localhost" or action_host.startswith("127."):
                             continue
-                        # Drop third-party (domain not in seed hosts)
-                        if action_host not in seed_hostnames:
+                        # Drop third-party (domain not in seed hosts or their subdomains)
+                        if not self._is_first_party(action_host, seed_hostnames):
                             continue
-                key = (fn.function_type, fn.method, fn.action)
+                fn_dict = {
+                    "type": fn.function_type,
+                    "method": fn.method,
+                    "action": fn.action,
+                    "details": fn.details,
+                }
+                key = self._fn_dedup_key(fn_dict)
                 if key not in seen:
                     seen.add(key)
-                    deduped_functions.append({
-                        "type": fn.function_type,
-                        "method": fn.method,
-                        "action": fn.action,
-                        "details": fn.details,
-                    })
+                    deduped_functions.append(fn_dict)
             clean_pages.append((page, deduped_functions))
 
         # Second pass: count pages each unique function appears on
         fn_page_count: dict = defaultdict(int)
         for _page, fns in clean_pages:
             for fn in fns:
-                fn_page_count[(fn["type"], fn["method"], fn["action"])] += 1
+                fn_page_count[self._fn_dedup_key(fn)] += 1
 
-        # Functions on 50%+ of pages are global
-        threshold = max(1, total_pages * 0.5)
+        # Functions on 40%+ of pages are treated as site-wide globals
+        threshold = max(1, total_pages * 0.4)
         global_keys = {k for k, count in fn_page_count.items() if count >= threshold}
 
         # Build global_functions list (deduplicated, sorted by seen_on_pages desc)
+        global_fn_seen: set = set()
+        global_functions_raw = []
+        for _page, fns in clean_pages:
+            for fn in fns:
+                k = self._fn_dedup_key(fn)
+                if k in global_keys and k not in global_fn_seen:
+                    global_fn_seen.add(k)
+                    entry = {
+                        "type": fn["type"],
+                        "method": fn["method"],
+                        "action": fn["action"],
+                        "seen_on_pages": fn_page_count[k],
+                    }
+                    # For input_field globals, include the field name for clarity
+                    if fn["action"] is None and fn.get("details", {}).get("name"):
+                        entry["name"] = fn["details"]["name"]
+                    global_functions_raw.append(entry)
+
         global_functions = sorted(
-            [
-                {
-                    "type": k[0],
-                    "method": k[1],
-                    "action": k[2],
-                    "seen_on_pages": fn_page_count[k],
-                }
-                for k in global_keys
-            ],
+            global_functions_raw,
             key=lambda x: x["seen_on_pages"],
             reverse=True,
         )
 
-        # Build per-page output, stripping global functions
+        # Build per-page output, stripping global functions; drop pages with no functions
         pages = []
         for page, fns in clean_pages:
             page_fns = [
                 fn for fn in fns
-                if (fn["type"], fn["method"], fn["action"]) not in global_keys
+                if self._fn_dedup_key(fn) not in global_keys
             ]
+            if not page_fns:
+                continue
             pages.append({
                 "url": page.url,
                 "status_code": page.status_code,
@@ -330,7 +363,8 @@ class Reporter:
         output = {
             "meta": {
                 "seed_urls": self.result.seed_urls,
-                "total_pages": len(pages),
+                "total_pages": total_pages,
+                "pages_with_unique_functions": len(pages),
                 "total_functions": total_functions,
             },
             "global_functions": global_functions,
